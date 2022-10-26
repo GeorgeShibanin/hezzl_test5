@@ -5,20 +5,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/GeorgeShibanin/hezzl_test5/internal/storage"
+	"github.com/GeorgeShibanin/hezzl_test5/internal/storage/clickhousestorage"
+	"github.com/GeorgeShibanin/hezzl_test5/internal/storage/nats"
 	"github.com/go-redis/redis/v8"
 	"log"
 	"time"
 )
 
 type Storage struct {
-	conn   storage.Storage
-	client *redis.Client
+	conn     storage.Storage
+	logStore *clickhousestorage.StorageClickHouse
+	client   *redis.Client
+	queue    *nats.NatsQueue
 }
 
-func Init(redisClient *redis.Client, persistentStorage storage.Storage) (*Storage, error) {
+func Init(redisClient *redis.Client, persistentStorage storage.Storage, logStorage *clickhousestorage.StorageClickHouse, queue *nats.NatsQueue) (*Storage, error) {
 	return &Storage{
-		conn:   persistentStorage,
-		client: redisClient,
+		conn:     persistentStorage,
+		logStore: logStorage,
+		client:   redisClient,
+		queue:    queue,
 	}, nil
 }
 
@@ -57,13 +63,46 @@ func (s *Storage) GetItems(ctx context.Context) ([]storage.Item, error) {
 }
 
 func (s *Storage) DeleteItem(ctx context.Context, id storage.Id, campaignId storage.CampaignId) (storage.Item, error) {
-	return s.conn.DeleteItem(ctx, id, campaignId)
+	item, err := s.conn.DeleteItem(ctx, id, campaignId)
+	status, err := s.queue.PushMessage(item)
+	log.Println(status)
+	if err != nil {
+		return storage.Item{}, err
+	}
+	status, err = s.logStore.Add(item)
+	log.Println(status)
+	if err != nil {
+		return storage.Item{}, err
+	}
+	return item, err
 }
 
 func (s *Storage) PatchItem(ctx context.Context, id storage.Id, campaignId storage.CampaignId, name storage.Name, description storage.Description) (storage.Item, error) {
-	return s.conn.PatchItem(ctx, id, campaignId, name, description)
+	item, err := s.conn.PatchItem(ctx, id, campaignId, name, description)
+	status, err := s.queue.PushMessage(item)
+	log.Println(status)
+	if err != nil {
+		return storage.Item{}, err
+	}
+	status, err = s.logStore.Add(item)
+	log.Println(status)
+	if err != nil {
+		return storage.Item{}, err
+	}
+	return item, err
 }
 
 func (s *Storage) PostItem(ctx context.Context, campaignId storage.CampaignId, name storage.Name) (storage.Item, error) {
-	return s.conn.PostItem(ctx, campaignId, name)
+	item, err := s.conn.PostItem(ctx, campaignId, name)
+	status, err := s.queue.PushMessage(item)
+	log.Println(status)
+	if err != nil {
+		return storage.Item{}, err
+	}
+	status, err = s.logStore.Add(item)
+	log.Println(status)
+	if err != nil {
+		return storage.Item{}, err
+	}
+	return item, err
 }

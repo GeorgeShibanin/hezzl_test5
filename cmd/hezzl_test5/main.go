@@ -5,6 +5,8 @@ import (
 	"github.com/GeorgeShibanin/hezzl_test5/internal/config"
 	"github.com/GeorgeShibanin/hezzl_test5/internal/handlers"
 	"github.com/GeorgeShibanin/hezzl_test5/internal/storage"
+	"github.com/GeorgeShibanin/hezzl_test5/internal/storage/clickhousestorage"
+	"github.com/GeorgeShibanin/hezzl_test5/internal/storage/nats"
 	"github.com/GeorgeShibanin/hezzl_test5/internal/storage/postgres"
 	"github.com/GeorgeShibanin/hezzl_test5/internal/storage/rediscachedstorage"
 	"github.com/go-redis/redis/v8"
@@ -31,7 +33,9 @@ func NewServer() *http.Server {
 	})
 
 	store = initPostgres()
-	store, err = rediscachedstorage.Init(redisClient, store)
+	clickhouseStore := initClickHouse()
+	natsQueue := connectNats()
+	store, err = rediscachedstorage.Init(redisClient, store, clickhouseStore, natsQueue)
 	if err != nil {
 		log.Fatalf("can't init postgres connection: %s", err.Error())
 	}
@@ -50,6 +54,14 @@ func NewServer() *http.Server {
 	}
 }
 
+func initClickHouse() *clickhousestorage.StorageClickHouse {
+	click, err := clickhousestorage.Init()
+	if err != nil {
+		log.Fatalf("can't init postgres connection: %s", err.Error())
+	}
+	return click
+}
+
 func initPostgres() *postgres.StoragePostgres {
 	store, err := postgres.Init(
 		context.Background(),
@@ -63,4 +75,12 @@ func initPostgres() *postgres.StoragePostgres {
 		log.Fatalf("can't init postgres connection: %s", err.Error())
 	}
 	return store
+}
+
+func connectNats() *nats.NatsQueue {
+	natsQueue, err := nats.Init(config.NatsURL)
+	if err != nil {
+		log.Fatalf("can't init postgres connection: %s", err.Error())
+	}
+	return natsQueue
 }
