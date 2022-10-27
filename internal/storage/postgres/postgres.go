@@ -38,7 +38,6 @@ func initConnection(conn *pgx.Conn) *StoragePostgres {
 }
 
 func Init(ctx context.Context, host, user, db, password string, port uint16) (*StoragePostgres, error) {
-	//подключение к базе через переменные окружения
 	conn, err := pgx.Connect(ctx, fmt.Sprintf(dsnTemplate, user, password, host, port, db))
 	if err != nil {
 		return nil, errors.Wrap(err, "can't connect to postgres")
@@ -86,7 +85,6 @@ func (s *StoragePostgres) PatchItem(ctx context.Context, id storage.Id, campaign
 	err = tx.QueryRow(ctx, PatchItems, name, &item.Description, id, campaignId).
 		Scan(&item.Id, &item.CampaignId, &item.Name, &item.Description, &item.Priority, &item.Removed, &item.CreatedAt)
 	if err != nil {
-		//Обработай ошибку
 		if errors.Is(err, pgx.ErrNoRows) {
 			return storage.Item{}, fmt.Errorf("item not exist - %w", storage.StorageError)
 		}
@@ -99,7 +97,6 @@ func (s *StoragePostgres) GetItems(ctx context.Context) ([]storage.Item, error) 
 	items := make([]storage.Item, 0)
 	rows, err := s.conn.Query(ctx, GetAllItems)
 	if err != nil {
-		//Оформи здесь ошибку
 		log.Fatal(err)
 		return nil, err
 	}
@@ -108,7 +105,6 @@ func (s *StoragePostgres) GetItems(ctx context.Context) ([]storage.Item, error) 
 		item := storage.Item{}
 		if err := rows.Scan(&item.Id, &item.CampaignId, &item.Name,
 			&item.Description, &item.Priority, &item.Removed, &item.CreatedAt); err != nil {
-			//Оформи здесь ошибку
 			log.Fatal(err)
 			return nil, err
 		}

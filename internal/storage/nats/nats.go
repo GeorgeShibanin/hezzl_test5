@@ -31,11 +31,11 @@ func (n *NatsQueue) PushMessage(message storage.Item) (string, error) {
 	if err != nil {
 		//Обработать ошибку
 		log.Fatal(err)
-		return "FAILtoMarahall", err
+		return "FAIL to Marahall", err
 	}
 	err = n.conn.Publish("logs", m)
 	if err != nil {
-		return "FAILPublish", err
+		return "FAIL to Publish", err
 	}
 	return "WellDoneYouSend", nil
 }

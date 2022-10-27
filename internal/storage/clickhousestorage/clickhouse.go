@@ -2,6 +2,7 @@ package clickhousestorage
 
 import (
 	"database/sql"
+	"github.com/GeorgeShibanin/hezzl_test5/internal/config"
 	"github.com/GeorgeShibanin/hezzl_test5/internal/storage"
 	_ "github.com/mailru/go-clickhouse/v2"
 	"log"
@@ -16,7 +17,7 @@ func initConnection(conn *sql.DB) *StorageClickHouse {
 }
 
 func Init() (*StorageClickHouse, error) {
-	connect, err := sql.Open("chhttp", "http://default:asdqwe123@127.0.0.1:8123")
+	connect, err := sql.Open("chhttp", config.ClickHouse)
 	if err != nil {
 		log.Fatal(err)
 	}
