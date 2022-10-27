@@ -1,61 +1,50 @@
 package clickhousestorage
 
 import (
-	"github.com/GeorgeShibanin/hezzl_test5/internal/config"
+	"database/sql"
 	"github.com/GeorgeShibanin/hezzl_test5/internal/storage"
-	"github.com/roistat/go-clickhouse"
+	_ "github.com/mailru/go-clickhouse/v2"
 	"log"
 )
 
-const (
-	PatchItemsLog  = `INSERT INTO items VALUES ()`
-	AddItemsLog    = ``
-	DeleteItemsLog = ``
-)
-
 type StorageClickHouse struct {
-	conn *clickhouse.Conn
+	conn *sql.DB
 }
 
-func initConnection(conn *clickhouse.Conn) *StorageClickHouse {
+func initConnection(conn *sql.DB) *StorageClickHouse {
 	return &StorageClickHouse{conn: conn}
 }
 
 func Init() (*StorageClickHouse, error) {
-	clickHouseClient := clickhouse.NewHttpTransport()
-	clickHouseConn := clickhouse.NewConn(config.ClickHouse, clickHouseClient)
-	err := clickHouseConn.Ping()
-	log.Println("connected to clickhouse")
+	connect, err := sql.Open("chhttp", "http://default:asdqwe123@127.0.0.1:8123")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	return initConnection(clickHouseConn), nil
+	if err := connect.Ping(); err != nil {
+		log.Fatal(err)
+	}
+
+	return initConnection(connect), nil
 }
 
 func (s *StorageClickHouse) Add(item storage.Item) (string, error) {
-	query, err := clickhouse.BuildInsert("items",
-		clickhouse.Columns{"id", "campaign_id", "name", "description", "priority", "removed", "created_ad"},
-		clickhouse.Row{item.Id, item.CampaignId, item.Name, item.Description, item.Priority, item.Removed, item.CreatedAt},
-	)
+	tx, err := s.conn.Begin()
 	if err != nil {
-		log.Println("LOL HERE", err)
+		log.Fatal(err)
 	}
-	err = query.Exec(s.conn)
-	if err != nil {
-		log.Println(err)
-	}
+	stmt, err := tx.Prepare(`INSERT INTO items (*) VALUES (?, ?, ?, ?, ?, ?, ?)`)
 
-	if err == nil {
-		err = query.Exec(s.conn)
-		if err != nil {
-			log.Println(err)
-		}
-		if err == nil {
-			return "OK", nil
-		}
-		log.Println("trouble while add to clickhouse")
-		return "NO YOU FAILED", err
+	if err != nil {
+		log.Fatal(err)
 	}
-	log.Println("trouble while add to clickhouse")
-	return "NO YOU FAILED", err
+	if _, err := stmt.Exec(item.Id, item.CampaignId, item.Name,
+		item.Description, item.Priority, item.Removed, item.CreatedAt); err != nil {
+		log.Fatal(err)
+		return "YOU LOX", err
+	}
+	if err := tx.Commit(); err != nil {
+		log.Fatal(err)
+		return "YOU LOX2", err
+	}
+	return "Ok with add to click", nil
 }

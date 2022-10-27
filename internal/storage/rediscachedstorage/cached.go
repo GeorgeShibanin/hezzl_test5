@@ -8,6 +8,7 @@ import (
 	"github.com/GeorgeShibanin/hezzl_test5/internal/storage/clickhousestorage"
 	"github.com/GeorgeShibanin/hezzl_test5/internal/storage/nats"
 	"github.com/go-redis/redis/v8"
+	"github.com/pkg/errors"
 	"log"
 	"time"
 )
@@ -64,6 +65,9 @@ func (s *Storage) GetItems(ctx context.Context) ([]storage.Item, error) {
 
 func (s *Storage) DeleteItem(ctx context.Context, id storage.Id, campaignId storage.CampaignId) (storage.Item, error) {
 	item, err := s.conn.DeleteItem(ctx, id, campaignId)
+	if err != nil {
+		return storage.Item{}, errors.Wrap(err, "errors.item.notFound")
+	}
 	status, err := s.queue.PushMessage(item)
 	log.Println(status)
 	if err != nil {
@@ -77,8 +81,11 @@ func (s *Storage) DeleteItem(ctx context.Context, id storage.Id, campaignId stor
 	return item, err
 }
 
-func (s *Storage) PatchItem(ctx context.Context, id storage.Id, campaignId storage.CampaignId, name storage.Name, description storage.Description) (storage.Item, error) {
-	item, err := s.conn.PatchItem(ctx, id, campaignId, name, description)
+func (s *Storage) PatchItem(ctx context.Context, id storage.Id, campaignId storage.CampaignId, name storage.Name, description storage.Description, flag int) (storage.Item, error) {
+	item, err := s.conn.PatchItem(ctx, id, campaignId, name, description, flag)
+	if err != nil {
+		return storage.Item{}, errors.Wrap(err, "errors.item.notFound")
+	}
 	status, err := s.queue.PushMessage(item)
 	log.Println(status)
 	if err != nil {
@@ -94,6 +101,9 @@ func (s *Storage) PatchItem(ctx context.Context, id storage.Id, campaignId stora
 
 func (s *Storage) PostItem(ctx context.Context, campaignId storage.CampaignId, name storage.Name) (storage.Item, error) {
 	item, err := s.conn.PostItem(ctx, campaignId, name)
+	if err != nil {
+		return storage.Item{}, errors.Wrap(err, "error while pushing data to postgres")
+	}
 	status, err := s.queue.PushMessage(item)
 	log.Println(status)
 	if err != nil {

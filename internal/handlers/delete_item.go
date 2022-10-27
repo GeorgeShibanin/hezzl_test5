@@ -28,7 +28,7 @@ func (h *HTTPHandler) HandleDeleteItem(rw http.ResponseWriter, r *http.Request) 
 
 	item, err := h.storage.DeleteItem(r.Context(), storage.Id(newId), storage.CampaignId(campaignId))
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusNotFound)
 		return
 	}
 	response := ResponseDeleteItem{

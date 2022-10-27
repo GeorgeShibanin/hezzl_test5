@@ -62,7 +62,7 @@ func (s *StoragePostgres) PostItem(ctx context.Context, campaignId storage.Campa
 	return item, nil
 }
 
-func (s *StoragePostgres) PatchItem(ctx context.Context, id storage.Id, campaignId storage.CampaignId, name storage.Name, description storage.Description) (storage.Item, error) {
+func (s *StoragePostgres) PatchItem(ctx context.Context, id storage.Id, campaignId storage.CampaignId, name storage.Name, description storage.Description, flag int) (storage.Item, error) {
 	tx, err := s.conn.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return storage.Item{}, errors.Wrap(err, "can't create tx")
@@ -77,18 +77,12 @@ func (s *StoragePostgres) PatchItem(ctx context.Context, id storage.Id, campaign
 	item := storage.Item{}
 	err = tx.QueryRow(ctx, GetById, id, campaignId).Scan(&item.Id, &item.Description)
 	if err != nil {
-		//Оформить ошибку по пункту 7 в задании
-		//log.Println("here cant find this shit by id")
 		return storage.Item{}, fmt.Errorf("errors.item.notFound - %w", err)
 	}
-	//ПОФИКСИТЬ
-
-	log.Println(description)
-	if string(description) != "" && string(description) != item.Description {
+	if flag == 0 {
 		item.Description = string(description)
-		log.Println("new descr", description)
 	}
-	//по другому через exeс но без return
+
 	err = tx.QueryRow(ctx, PatchItems, name, &item.Description, id, campaignId).
 		Scan(&item.Id, &item.CampaignId, &item.Name, &item.Description, &item.Priority, &item.Removed, &item.CreatedAt)
 	if err != nil {

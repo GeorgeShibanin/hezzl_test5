@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/GeorgeShibanin/hezzl_test5/internal/storage"
 	"github.com/pkg/errors"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -28,10 +29,17 @@ func (h *HTTPHandler) HandlePatchItem(rw http.ResponseWriter, r *http.Request) {
 
 	var patchData PatchData
 	err = json.NewDecoder(r.Body).Decode(&patchData)
+	flagExistDescription := 1
+	description := ""
+	if patchData.Description != nil {
+		flagExistDescription = 0
+		description = *patchData.Description
+	}
 
-	item, err := h.storage.PatchItem(r.Context(), storage.Id(newId), storage.CampaignId(campaignId), storage.Name(patchData.Name), storage.Description(patchData.Description))
+	log.Println(description)
+	item, err := h.storage.PatchItem(r.Context(), storage.Id(newId), storage.CampaignId(campaignId), storage.Name(patchData.Name), storage.Description(description), flagExistDescription)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusNotFound)
 		return
 	}
 	response := ResponseData(item)

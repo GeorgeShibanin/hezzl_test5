@@ -3,15 +3,11 @@ package storage
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 )
 
 var (
-	StorageError    = errors.New("storage")
-	ErrCollision    = fmt.Errorf("%w.collision", StorageError)
-	ErrAlreadyExist = errors.New("key already exist")
-	ErrNotFound     = fmt.Errorf("%w.not_found", StorageError)
+	StorageError = errors.New("storage")
 )
 
 type Id int
@@ -31,7 +27,7 @@ type Item struct {
 
 type Storage interface {
 	PostItem(ctx context.Context, campaignId CampaignId, name Name) (Item, error)
-	PatchItem(ctx context.Context, id Id, campaignId CampaignId, name Name, description Description) (Item, error)
+	PatchItem(ctx context.Context, id Id, campaignId CampaignId, name Name, description Description, flag int) (Item, error)
 	GetItems(ctx context.Context) ([]Item, error)
 	DeleteItem(ctx context.Context, id Id, campaignId CampaignId) (Item, error)
 }
